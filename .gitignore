@@ -13,6 +13,9 @@ venv/
 *.log
 logs/
 
+# Tweet history (user-specific, prevents duplicates)
+tweet_history.json
+
 # IDE
 .vscode/
 .idea/
