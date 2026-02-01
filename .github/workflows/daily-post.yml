@@ -2,7 +2,7 @@ name: Daily X Post
 
 on:
   schedule:
-    # Run at 9:00 AM IST (3:30 UTC) every day
+    # Run at 9:00 AM IST (03:30 UTC) every day
     - cron: '30 3 * * *'
     # Run at 7:34 PM IST (14:04 UTC) every day
     - cron: '4 14 * * *'

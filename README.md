@@ -15,11 +15,14 @@ XBot fetches developer discussions from Hacker News and GitHub, generates concis
 
 ## Features
 
-- **Trending Content Aggregation**: Fetches top discussions from Hacker News, GitHub trending repositories, and tech RSS feeds.
-- **AI-Generated Content**: Utilizes Groq to generate relevant, developer-focused tweets.
-- **Automated Posting**: Posts directly to X using the official API v2.
-- **Scheduled Execution**: Configured to run daily via GitHub Actions.
-- **Dry Run Mode**: Test the pipeline without posting to live accounts.
+| Feature | Description |
+|---------|-------------|
+| **Real Trending Topics** | Fetches hot discussions from Hacker News (with upvotes), GitHub trending repos, and tech RSS feeds |
+| **AI-Generated Content** | Uses Groq to generate authentic, developer-style tweets — not robotic marketing speak |
+| **Auto-Post to X** | Posts directly to your X account using the official API v2 |
+| **Duplicate Prevention** | Checks tweet history to avoid posting the same content twice |
+| **Scheduled Automation** | Runs daily at 9AM and 7:34PM IST via GitHub Actions — fully hands-off |
+| **Dry Run Mode** | Test the full pipeline without actually posting |
 
 ---
 
@@ -143,11 +146,13 @@ XBot/
 
 ### Schedule
 
-To change the posting time, modify the `.env` file or update the cron schedule in `.github/workflows/daily-post.yml` for GitHub Actions.
+The bot is configured to run twice daily at **9:00 AM** and **7:34 PM IST**.
 
+- **GitHub Actions**: The schedule is defined in `.github/workflows/daily-post.yml` using cron syntax.
+- **Local Scheduler**: The times are configured in `main.py`.
+
+To change the timezone, edit the `.env` file:
 ```env
-POST_HOUR=19
-POST_MINUTE=0
 TIMEZONE=Asia/Kolkata
 ```
 

@@ -108,18 +108,24 @@ def start_scheduler():
     tz = pytz.timezone(TIMEZONE)
     scheduler = BlockingScheduler(timezone=tz)
 
-    # Add job
-    trigger = CronTrigger(hour=POST_HOUR, minute=POST_MINUTE, timezone=tz)
-    scheduler.add_job(run_bot, trigger, id="daily_post")
+    # Add jobs for 9:00 AM and 7:34 PM
+    trigger_morning = CronTrigger(hour=9, minute=0, timezone=tz)
+    trigger_evening = CronTrigger(hour=19, minute=34, timezone=tz)
+    
+    scheduler.add_job(run_bot, trigger_morning, id="daily_post_morning")
+    scheduler.add_job(run_bot, trigger_evening, id="daily_post_evening")
 
-    # Calculate next run
+    # Log configuration
     now = datetime.now(tz)
-    next_run = scheduler.get_job("daily_post").next_run_time
     logger.info("\n📅 Scheduler configured:")
     logger.info(f"   Timezone: {TIMEZONE}")
-    logger.info(f"   Post time: {POST_HOUR:02d}:{POST_MINUTE:02d}")
+    logger.info(f"   Post times: 09:00, 19:34")
     logger.info(f"   Current time: {now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
-    logger.info(f"   Next run: {next_run.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+    
+    # Print next runs
+    for job in scheduler.get_jobs():
+        logger.info(f"   Next run ({job.id}): {job.next_run_time.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+
     logger.info(f"   Dry run mode: {DRY_RUN}")
 
     # Graceful shutdown
