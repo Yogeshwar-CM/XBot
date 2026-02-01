@@ -5,31 +5,25 @@
   <img src="https://img.shields.io/badge/GitHub_Actions-Automated-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Actions">
 </p>
 
-<h1 align="center">🤖 XBot</h1>
+# XBot
 
-<p align="center">
-  <strong>AI-powered X (Twitter) bot that auto-posts trending AI & Dev content daily</strong>
-</p>
+**Automated X (Twitter) bot for trending AI & Dev content.**
 
-<p align="center">
-  Fetches real developer discussions from Hacker News & GitHub, generates authentic tweets using Groq AI, and posts to X automatically via GitHub Actions.
-</p>
+XBot fetches developer discussions from Hacker News and GitHub, generates concise summaries using Groq AI, and automatically posts to X via GitHub Actions.
 
 ---
 
-## ✨ Features
+## Features
 
-| Feature | Description |
-|---------|-------------|
-| 🔥 **Real Trending Topics** | Fetches hot discussions from Hacker News (with upvotes), GitHub trending repos, and tech RSS feeds |
-| 🤖 **AI-Generated Content** | Uses Groq (free tier) to generate authentic, developer-style tweets — not robotic marketing speak |
-| 📤 **Auto-Post to X** | Posts directly to your X account using the official API v2 |
-| ⏰ **Scheduled Automation** | Runs daily at 7PM IST via GitHub Actions — fully hands-off |
-| 🧪 **Dry Run Mode** | Test the full pipeline without actually posting |
+- **Trending Content Aggregation**: Fetches top discussions from Hacker News, GitHub trending repositories, and tech RSS feeds.
+- **AI-Generated Content**: Utilizes Groq to generate relevant, developer-focused tweets.
+- **Automated Posting**: Posts directly to X using the official API v2.
+- **Scheduled Execution**: Configured to run daily via GitHub Actions.
+- **Dry Run Mode**: Test the pipeline without posting to live accounts.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -40,7 +34,7 @@
 ### Installation
 
 ```bash
-# Clone the repo
+# Clone the repository
 git clone https://github.com/yourusername/XBot.git
 cd XBot
 
@@ -59,45 +53,44 @@ cp .env.example .env
 ### Usage
 
 ```bash
-# Verify your API credentials
+# Verify API credentials
 python main.py --verify
 
-# Test run (doesn't post)
+# Test run (dry run, does not post)
 DRY_RUN=true python main.py --now
 
 # Post immediately
 python main.py --now
 
-# Start scheduler (runs daily at 7PM)
+# Start local scheduler
 python main.py
 ```
 
 ---
 
-## 🔑 API Setup
+## API Setup
 
 ### X (Twitter) API
 
-1. Go to [X Developer Portal](https://developer.x.com/en/portal/dashboard)
-2. Create a **Project** → Create an **App**
-3. Navigate to **Keys and Tokens**
-4. Generate and save:
+1. Go to the [X Developer Portal](https://developer.x.com/en/portal/dashboard).
+2. Create a **Project** and an **App**.
+3. Navigate to **Keys and Tokens**.
+4. Generate the following:
    - `API Key` & `API Key Secret`
    - `Access Token` & `Access Token Secret`
+5. Ensure **Read and Write** permissions are enabled in User Authentication Settings.
 
-> ⚠️ **Important**: Enable **Read and Write** permissions in User Authentication Settings
+### Groq API
 
-### Groq API (Free)
-
-1. Sign up at [console.groq.com](https://console.groq.com)
-2. Go to **API Keys** → **Create API Key**
-3. Copy and save your key
+1. Sign up at [console.groq.com](https://console.groq.com).
+2. Create a new API Key.
+3. Save the key for configuration.
 
 ---
 
-## ☁️ Deploy with GitHub Actions
+## Deploy with GitHub Actions
 
-The bot runs automatically at **7PM IST daily** using GitHub Actions.
+The bot is configured to run automatically using GitHub Actions.
 
 ### Setup
 
@@ -107,9 +100,9 @@ The bot runs automatically at **7PM IST daily** using GitHub Actions.
    git push -u origin main
    ```
 
-2. **Add Repository Secrets**
+2. **Configure Secrets**
    
-   Go to **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+   Navigate to **Settings** → **Secrets and variables** → **Actions** → **New repository secret** in your GitHub repository.
    
    | Secret Name | Description |
    |-------------|-------------|
@@ -119,77 +112,68 @@ The bot runs automatically at **7PM IST daily** using GitHub Actions.
    | `X_ACCESS_TOKEN_SECRET` | Your X Access Token Secret |
    | `GROQ_API_KEY` | Your Groq API Key |
 
-3. **Done!** The bot will run daily at 7PM IST.
-
-   To trigger manually: **Actions** → **Daily X Post** → **Run workflow**
+3. **Validation**
+   The workflow will trigger automatically based on the schedule defined in `.github/workflows/daily-post.yml`.
+   To trigger manually: Go to **Actions** → **Daily X Post** → **Run workflow**.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 XBot/
 ├── config/
-│   └── settings.py           # Configuration & environment management
+│   └── settings.py           # Configuration settings
 ├── modules/
-│   ├── news_fetcher.py       # HN, GitHub, RSS aggregation
-│   ├── content_generator.py  # Groq AI tweet generation
-│   └── x_poster.py           # X API v2 integration
+│   ├── news_fetcher.py       # Content aggregation logic
+│   ├── content_generator.py  # AI generation logic
+│   └── x_poster.py           # X API integration
 ├── .github/
 │   └── workflows/
-│       └── daily-post.yml    # GitHub Actions workflow
-├── main.py                    # CLI entry point
-├── requirements.txt           # Python dependencies
-├── .env.example               # Environment template
+│       └── daily-post.yml    # CI/CD configuration
+├── main.py                   # Application entry point
+├── requirements.txt          # Dependencies
+├── .env.example              # Environment variable template
 └── README.md
 ```
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
-### Change Post Time
+### Schedule
 
-Edit `.env`:
+To change the posting time, modify the `.env` file or update the cron schedule in `.github/workflows/daily-post.yml` for GitHub Actions.
+
 ```env
-POST_HOUR=19    # 24-hour format
+POST_HOUR=19
 POST_MINUTE=0
 TIMEZONE=Asia/Kolkata
 ```
 
-### Add News Sources
+### News Sources
 
-Edit `config/settings.py`:
+Add or remove sources in `config/settings.py`:
+
 ```python
 RSS_FEEDS = [
     {"name": "Your Source", "url": "https://example.com/feed", "category": "Tech"},
-    # Add more...
 ]
 ```
 
-### Customize Tweet Style
+---
 
-Modify the prompt in `modules/content_generator.py` to change the AI's writing style.
+## Tech Stack
+
+- **Python 3.11+**
+- **Tweepy** (X API v2)
+- **Groq** (LLM Inference)
+- **APScheduler**
+- **Feedparser**
+- **GitHub Actions**
 
 ---
 
-## 🛠️ Tech Stack
+## License
 
-- **Python 3.11+** — Core runtime
-- **Tweepy** — X API v2 client
-- **Groq** — Fast, free LLM inference
-- **APScheduler** — Task scheduling
-- **Feedparser** — RSS parsing
-- **GitHub Actions** — CI/CD automation
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
-
----
-
-<p align="center">
-  Made with ❤️ by <a href="https://x.com/yogeshwarcodes">@yogeshwarcodes</a>
-</p>
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
