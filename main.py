@@ -16,7 +16,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from config.settings import TIMEZONE, POST_HOUR, POST_MINUTE, DRY_RUN, validate_config
 from modules.news_fetcher import fetch_all_trending
-from modules.content_generator import generate_with_retry
+from modules.content_generator import generate_with_retry, generate_discussion_tweet
 from modules.x_poster import post_tweet, verify_credentials
 from modules.cache_manager import is_duplicate, add_to_cache, get_recent_posts
 
@@ -32,12 +32,33 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def run_bot():
+def run_bot(tweet_type: str = "auto"):
     """
     Main bot execution: Fetch trending → Generate tweet → Post to X
+
+    Args:
+        tweet_type: 'digest', 'comment', or 'auto'
     """
     logger.info("=" * 50)
-    logger.info("🤖 X Automation Bot - Starting run")
+    logger.info(f"🤖 X Automation Bot - Starting run (Type: {tweet_type})")
+
+    # Determine type if auto
+    if tweet_type == "auto":
+        # Get current hour in IST
+        tz = pytz.timezone(TIMEZONE)
+        current_hour = datetime.now(tz).hour
+
+        # 3 AM & 7 PM (19) -> Digest
+        # 9 AM & 9 PM (21) -> Comment
+        if current_hour in [3, 19]:
+            tweet_type = "digest"
+        elif current_hour in [9, 21]:
+            tweet_type = "comment"
+        else:
+            # Default fallback based on time of day
+            tweet_type = "digest" if current_hour < 12 else "comment"
+
+    logger.info(f"   Using mode: {tweet_type.upper()}")
     logger.info("=" * 50)
 
     try:
@@ -72,7 +93,29 @@ def run_bot():
         tweet = None
 
         for attempt in range(max_attempts):
-            tweet = generate_with_retry(trending, recent_posts=recent_posts)
+            if tweet_type == "comment":
+                # Pick a random top discussion to comment on
+                import random
+
+                sources = []
+                if trending.get("hn_discussions"):
+                    sources.append(random.choice(trending["hn_discussions"][:3]))
+                if trending.get("github_repos"):
+                    sources.append(random.choice(trending["github_repos"][:2]))
+
+                if sources:
+                    chosen_topic = random.choice(sources)
+                    logger.info(f"   Selected topic: {chosen_topic.get('title')}")
+                    tweet = generate_discussion_tweet(chosen_topic)
+                else:
+                    logger.warning(
+                        "   No specific topics found, falling back to digest"
+                    )
+                    tweet = generate_with_retry(trending, recent_posts=recent_posts)
+            else:
+                # Default digest mode
+                tweet = generate_with_retry(trending, recent_posts=recent_posts)
+
             logger.info(f"   Generated ({len(tweet)} chars): {tweet}")
 
             # Check if duplicate
@@ -139,18 +182,44 @@ def start_scheduler():
     tz = pytz.timezone(TIMEZONE)
     scheduler = BlockingScheduler(timezone=tz)
 
-    # Add jobs for 9:00 AM and 7:34 PM
-    trigger_morning = CronTrigger(hour=9, minute=0, timezone=tz)
-    trigger_evening = CronTrigger(hour=19, minute=34, timezone=tz)
+    # Add jobs for 4x daily schedule
+    # 03:00 AM - Digest
+    scheduler.add_job(
+        run_bot,
+        CronTrigger(hour=3, minute=0, timezone=tz),
+        id="post_morning_digest",
+        kwargs={"tweet_type": "digest"},
+    )
 
-    scheduler.add_job(run_bot, trigger_morning, id="daily_post_morning")
-    scheduler.add_job(run_bot, trigger_evening, id="daily_post_evening")
+    # 09:00 AM - Comment
+    scheduler.add_job(
+        run_bot,
+        CronTrigger(hour=9, minute=0, timezone=tz),
+        id="post_morning_comment",
+        kwargs={"tweet_type": "comment"},
+    )
+
+    # 07:34 PM - Digest
+    scheduler.add_job(
+        run_bot,
+        CronTrigger(hour=19, minute=34, timezone=tz),
+        id="post_evening_digest",
+        kwargs={"tweet_type": "digest"},
+    )
+
+    # 09:14 PM - Comment
+    scheduler.add_job(
+        run_bot,
+        CronTrigger(hour=21, minute=14, timezone=tz),
+        id="post_night_comment",
+        kwargs={"tweet_type": "comment"},
+    )
 
     # Log configuration
     now = datetime.now(tz)
     logger.info("\n📅 Scheduler configured:")
     logger.info(f"   Timezone: {TIMEZONE}")
-    logger.info(f"   Post times: 09:00, 19:34")
+    logger.info(f"   Post times: 03:00 (D), 09:00 (C), 19:34 (D), 21:14 (C)")
     logger.info(f"   Current time: {now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
 
     # Print next runs
@@ -194,6 +263,12 @@ Examples:
         help="Run the bot once immediately instead of scheduling",
     )
     parser.add_argument(
+        "--type",
+        choices=["digest", "comment", "auto"],
+        default="auto",
+        help="Tweet type to generate (default: auto)",
+    )
+    parser.add_argument(
         "--verify", action="store_true", help="Verify credentials and exit"
     )
 
@@ -231,7 +306,7 @@ Examples:
                 logger.error(f"  • {error}")
             sys.exit(1)
 
-        run_bot()
+        run_bot(tweet_type=args.type)
     else:
         # Start scheduler
         start_scheduler()

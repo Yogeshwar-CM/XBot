@@ -3,9 +3,14 @@ name: Daily X Post
 on:
   schedule:
     # Run at 9:00 AM IST (03:30 UTC) every day
+    # Run at 3:00 AM IST (21:30 UTC) -> Digest
+    - cron: '30 21 * * *'
+    # Run at 9:00 AM IST (03:30 UTC) -> Comment
     - cron: '30 3 * * *'
-    # Run at 7:34 PM IST (14:04 UTC) every day
+    # Run at 7:34 PM IST (14:04 UTC) -> Digest
     - cron: '4 14 * * *'
+    # Run at 9:14 PM IST (15:44 UTC) -> Comment
+    - cron: '44 15 * * *'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
