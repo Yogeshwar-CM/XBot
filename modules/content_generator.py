@@ -18,6 +18,8 @@ You just saw these trending discussions in the dev community:
 
 {context}
 
+{recent_posts_context}
+
 Write ONE tweet that:
 1. Sounds like a REAL person sharing something cool they found
 2. References the actual discussion/topic (be specific, not vague)
@@ -26,6 +28,7 @@ Write ONE tweet that:
 5. Uses casual language (contractions, lowercase ok, emoji sparingly)
 6. MUST be under 240 characters (leave room for hashtags)
 7. Ends with 2-3 relevant hashtags like #AI #Tech #Coding #OpenSource #DevLife
+8. Is DIFFERENT from your recent posts in topic, angle, or tone
 
 STYLE EXAMPLES (mimic this vibe):
 - "just saw devs arguing about tabs vs spaces again on HN... in 2026 lol 💀"
@@ -40,6 +43,7 @@ DO NOT:
 - Use more than 1-2 emojis
 - Be generic
 - Include ANY URLs or links (I'll add those myself)
+- Repeat topics or angles from your recent posts
 
 Output ONLY the tweet text, nothing else:"""
 
@@ -57,12 +61,13 @@ Include the topic reference so followers know what you're talking about.
 Just the tweet text, no quotes:"""
 
 
-def generate_tweet(trending_data: Dict) -> str:
+def generate_tweet(trending_data: Dict, recent_posts: list = None) -> str:
     """
     Generate an authentic tweet based on trending dev discussions.
 
     Args:
         trending_data: Dict with hn_discussions, github_repos, news from fetch_all_trending()
+        recent_posts: Optional list of recently posted tweets for context
 
     Returns:
         Generated tweet text (under 280 characters)
@@ -100,7 +105,19 @@ def generate_tweet(trending_data: Dict) -> str:
         context_parts = ["AI and coding tools continue to evolve rapidly"]
 
     context = "\n".join(context_parts)
-    prompt = TWEET_PROMPT.format(context=context)
+
+    # Build recent posts context
+    recent_posts_context = ""
+    if recent_posts:
+        recent_posts_context = (
+            "YOUR RECENT POSTS (avoid repeating these topics/angles):\n"
+        )
+        for i, post in enumerate(recent_posts[:10], 1):
+            recent_posts_context += f"  {i}. {post}\n"
+
+    prompt = TWEET_PROMPT.format(
+        context=context, recent_posts_context=recent_posts_context
+    )
 
     try:
         client = Groq(api_key=GROQ_API_KEY)
@@ -192,12 +209,15 @@ def generate_discussion_tweet(discussion: Dict) -> str:
         raise
 
 
-def generate_with_retry(trending_data: Dict, max_retries: int = 3) -> str:
+def generate_with_retry(
+    trending_data: Dict, recent_posts: list = None, max_retries: int = 3
+) -> str:
     """
     Generate tweet with retry logic.
 
     Args:
         trending_data: Trending content dict
+        recent_posts: Optional list of recent posts for context
         max_retries: Maximum retry attempts
 
     Returns:
@@ -205,7 +225,7 @@ def generate_with_retry(trending_data: Dict, max_retries: int = 3) -> str:
     """
     for attempt in range(max_retries):
         try:
-            tweet = generate_tweet(trending_data)
+            tweet = generate_tweet(trending_data, recent_posts)
             if tweet and len(tweet) <= 280:
                 return tweet
         except Exception as e:

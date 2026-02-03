@@ -18,6 +18,7 @@ from config.settings import TIMEZONE, POST_HOUR, POST_MINUTE, DRY_RUN, validate_
 from modules.news_fetcher import fetch_all_trending
 from modules.content_generator import generate_with_retry
 from modules.x_poster import post_tweet, verify_credentials
+from modules.cache_manager import is_duplicate, add_to_cache, get_recent_posts
 
 # Setup logging
 logging.basicConfig(
@@ -58,14 +59,44 @@ def run_bot():
         for r in trending.get("github_repos", [])[:2]:
             logger.info(f"   ⭐ GH: {r['title'][:50]}... ({r['stars']} stars)")
 
-        # Step 2: Generate authentic tweet
+        # Step 2: Generate authentic tweet (with retry if duplicate)
         logger.info("\n🤖 Step 2: Generating tweet with AI...")
-        tweet = generate_with_retry(trending)
-        logger.info(f"   Generated ({len(tweet)} chars): {tweet}")
+
+        # Get recent posts for context
+        recent_posts = get_recent_posts(limit=10)
+        logger.info(
+            f"   Context: Using last {len(recent_posts)} posts to avoid repetition"
+        )
+
+        max_attempts = 5
+        tweet = None
+
+        for attempt in range(max_attempts):
+            tweet = generate_with_retry(trending, recent_posts=recent_posts)
+            logger.info(f"   Generated ({len(tweet)} chars): {tweet}")
+
+            # Check if duplicate
+            if is_duplicate(tweet):
+                logger.warning(
+                    f"   ⚠️ Duplicate detected (attempt {attempt + 1}/{max_attempts}), regenerating..."
+                )
+                continue
+            else:
+                logger.info("   ✅ Unique content, proceeding to post")
+                break
+
+        if tweet is None or is_duplicate(tweet):
+            raise RuntimeError("Failed to generate unique content after all attempts")
 
         # Step 3: Post to X
         logger.info("\n📤 Step 3: Posting to X...")
         result = post_tweet(tweet)
+
+        # Step 4: Save to cache if successful
+        if not result.get("dry_run"):
+            tweet_id = result.get("tweet_id")
+            add_to_cache(tweet, tweet_id)
+            logger.info("   💾 Saved to cache")
 
         if result.get("dry_run"):
             logger.info("   [DRY RUN] Tweet was not actually posted")
@@ -111,7 +142,7 @@ def start_scheduler():
     # Add jobs for 9:00 AM and 7:34 PM
     trigger_morning = CronTrigger(hour=9, minute=0, timezone=tz)
     trigger_evening = CronTrigger(hour=19, minute=34, timezone=tz)
-    
+
     scheduler.add_job(run_bot, trigger_morning, id="daily_post_morning")
     scheduler.add_job(run_bot, trigger_evening, id="daily_post_evening")
 
@@ -121,10 +152,12 @@ def start_scheduler():
     logger.info(f"   Timezone: {TIMEZONE}")
     logger.info(f"   Post times: 09:00, 19:34")
     logger.info(f"   Current time: {now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
-    
+
     # Print next runs
     for job in scheduler.get_jobs():
-        logger.info(f"   Next run ({job.id}): {job.next_run_time.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+        logger.info(
+            f"   Next run ({job.id}): {job.next_run_time.strftime('%Y-%m-%d %H:%M:%S %Z')}"
+        )
 
     logger.info(f"   Dry run mode: {DRY_RUN}")
 
